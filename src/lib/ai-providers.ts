@@ -34,8 +34,13 @@ export async function deepSeekFetch(messages: Message[], model: string, temperat
     return response.body;
 }
 
-// Non-streaming fetch for internal steps (deprecated - not used in new architecture)
-export async function deepSeekFetchNonStream(messages: Message[], model: string, temperature: number = 0.7): Promise<string> {
+// Non-streaming fetch for Hardcore mode steps
+export async function deepSeekFetchNonStream(
+    messages: Message[],
+    model: string,
+    temperature: number = 0.7,
+    maxTokens?: number
+): Promise<string> {
     const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
     if (!DEEPSEEK_API_KEY) {
         throw new Error('DEEPSEEK_API_KEY not configured');
@@ -52,6 +57,7 @@ export async function deepSeekFetchNonStream(messages: Message[], model: string,
             messages,
             temperature,
             stream: false,
+            ...(maxTokens && { max_tokens: maxTokens }),
         }),
     });
 
@@ -92,4 +98,38 @@ export async function openAIFetch(messages: Message[], model: string = 'gpt-4o',
     }
 
     return response.body;
+}
+
+// Non-streaming fetch for GPT fallback
+export async function openAIFetchNonStream(
+    messages: Message[],
+    model: string = 'gpt-4o',
+    temperature: number = 0.7
+): Promise<string> {
+    const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+    if (!OPENAI_API_KEY) {
+        throw new Error('OPENAI_API_KEY not configured');
+    }
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+            model,
+            messages,
+            temperature,
+            stream: false,
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`OpenAI API Error: ${error}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0]?.message?.content || '';
 }
