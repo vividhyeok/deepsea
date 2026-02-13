@@ -1,5 +1,5 @@
 
-import { Message } from './deepseek';
+import { Message } from './ai-providers';
 
 export type Mode = 'auto' | 'lite' | 'standard' | 'hardcore';
 
@@ -38,57 +38,42 @@ Fixed Structure:
 
 ${BASE_RULES}`,
 
-    hardcore_step1: `Create a concise structural outline:
-- What is the core problem?
-- What dimensions must be analyzed?
-- What structure will the answer follow?
+    // Single-call Hardcore prompt for GPT-4
+    hardcore_gpt: `You are DeepSea in Hardcore mode, powered by GPT-4.
 
-Maximum 6 lines.
-No detailed reasoning.`,
+Your task is to provide a deeply structured, well-reasoned answer.
 
-    hardcore_step2: `You are DeepSea. Answer the user's request using the following structural plan.
+Internal Process (do not show to user):
+1. Analyze the core problem
+2. Plan your response structure
+3. Self-verify for logical consistency
 
-Plan:
-{PLAN}
-
-Structure:
+Output Structure (show to user):
 1. 핵심 개념 정리 (Core concept clarification)
-2. 구체적 분석 (Specific analysis)
+2. 구체적 분석 (Specific analysis with reasoning)
 3. 실전 적용 전략 (Practical application strategy)
 4. 한계 및 주의점 (Limitations and cautions)
 
-Rules:
-- Avoid strong certainty expressions
+Critical Rules:
+- Prioritize correctness over speed
 - Mark uncertain data as "확인 필요"
-- Prioritize factual correctness over the plan
+- Avoid speculation beyond 2-3 lines
+- Use structured markdown (headings, lists, code blocks)
+- If the question is ambiguous, clarify assumptions first
 
 ${BASE_RULES}`,
-
-    hardcore_step3_verify: `Review the following answer for quality issues:
-
-Answer:
-{ANSWER}
-
-Check only:
-- Logical leaps
-- Overgeneralization
-- Uncertain numbers/facts
-- Ambiguous expressions
-
-If issues found, provide a corrected version. Otherwise, return "PASS".`,
 };
 
+/**
+ * Detect mode based on input content.
+ * IMPORTANT: Auto mode can ONLY return 'lite' or 'standard', NEVER 'hardcore'.
+ * Hardcore must be manually selected by the user.
+ */
 export function detectMode(input: string, currentMode: Mode): Mode {
+    // If user explicitly selected a mode, respect it
     if (currentMode !== 'auto') return currentMode;
 
     const lowerInput = input.toLowerCase();
-
-    // Hardcore keywords (cognitive difficulty indicators)
-    const hardcoreKeywords = [
-        '왜', '원인', '구조', '병목', '전략', '단계적으로',
-        '근거', '비교', '분석', '검증', '설계', '최적화',
-        '구체적으로', '체계적으로', '정리해줘'
-    ];
 
     // Lite keywords (simple definition queries)
     const liteKeywords = ['뭐야', '무엇', '정의', '의미'];
@@ -97,18 +82,7 @@ export function detectMode(input: string, currentMode: Mode): Mode {
     const isDefinitionQuery = liteKeywords.some(w => lowerInput.includes(w)) && input.length < 30;
     if (isDefinitionQuery) return 'lite';
 
-    // Check for Hardcore mode
-    const hasHardcoreKeyword = hardcoreKeywords.some(w => lowerInput.includes(w));
-    const isLongQuery = input.length >= 20;
-    const requiresAnalysis = /코드|수학|아키텍처|정책/.test(lowerInput);
-
-    // Escalate to Hardcore if:
-    // 1. Has hardcore keyword + long query
-    // 2. Requires technical analysis
-    if ((hasHardcoreKeyword && isLongQuery) || requiresAnalysis) {
-        return 'hardcore';
-    }
-
-    // Default to Standard for comparison/explanation queries
+    // Auto mode defaults to Standard for everything else
+    // NEVER escalate to Hardcore automatically
     return 'standard';
 }

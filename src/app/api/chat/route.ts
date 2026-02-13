@@ -1,10 +1,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { deepSeekFetch, deepSeekFetchNonStream, Message } from '@/lib/deepseek';
+import { deepSeekFetch, openAIFetch, Message } from '@/lib/ai-providers';
 import { detectMode, SYSTEM_PROMPTS, Mode } from '@/lib/modes';
 import { verifyJWT } from '@/lib/jwt';
 
-export const runtime = 'edge'; // Optional: Use edge if compatible with jose/fetch
+export const runtime = 'edge';
 
 export async function POST(req: NextRequest) {
     try {
@@ -17,73 +17,25 @@ export async function POST(req: NextRequest) {
         const { messages, mode: reqMode, model } = await req.json();
         const lastMessage = messages[messages.length - 1];
 
-        // Determine effective mode
+        // Server-side mode enforcement
         let mode: Mode = reqMode || 'standard';
         if (mode === 'auto') {
+            // Auto can only return 'lite' or 'standard', never 'hardcore'
             mode = detectMode(lastMessage.content, 'auto');
         }
 
-        const currentModel = model || 'deepseek-chat';
         const finalMessages: Message[] = [...messages];
 
-        // Mode Logic
-        if (mode === 'lite') {
+        // ==================== MODE ROUTING ====================
+
+        if (mode === 'hardcore') {
+            // HARDCORE MODE: Use OpenAI GPT-4 with single-call prompt
             if (finalMessages.length > 0 && finalMessages[0].role !== 'system') {
-                finalMessages.unshift({ role: 'system', content: SYSTEM_PROMPTS.lite });
+                finalMessages.unshift({ role: 'system', content: SYSTEM_PROMPTS.hardcore_gpt });
             }
-        } else if (mode === 'standard') {
-            if (finalMessages.length > 0 && finalMessages[0].role !== 'system') {
-                finalMessages.unshift({ role: 'system', content: SYSTEM_PROMPTS.standard });
-            }
-        } else if (mode === 'hardcore') {
-            // Progressive streaming for hardcore mode to avoid timeouts
-            const encoder = new TextEncoder();
-            const stream = new ReadableStream({
-                async start(controller) {
-                    try {
-                        // Step 1: Structural Plan (6-line outline)
-                        const planMessages: Message[] = [
-                            { role: 'system', content: SYSTEM_PROMPTS.hardcore_step1 },
-                            ...messages
-                        ];
-                        const plan = await deepSeekFetchNonStream(planMessages, currentModel);
 
-                        // Step 2: Generate Answer
-                        const answerPrompt = SYSTEM_PROMPTS.hardcore_step2.replace('{PLAN}', plan);
-                        const answerMessages: Message[] = [
-                            { role: 'system', content: answerPrompt },
-                            ...messages
-                        ];
-                        const answer = await deepSeekFetchNonStream(answerMessages, currentModel);
-
-                        // Step 3: Verify (internal check)
-                        const verifyPrompt = SYSTEM_PROMPTS.hardcore_step3_verify.replace('{ANSWER}', answer);
-                        const verifyMessages: Message[] = [
-                            { role: 'system', content: verifyPrompt }
-                        ];
-                        const verifyResult = await deepSeekFetchNonStream(verifyMessages, currentModel);
-
-                        // If verification fails, use corrected version; otherwise use original
-                        const finalAnswer = verifyResult.trim() !== 'PASS' ? verifyResult : answer;
-
-                        // Stream final answer
-                        const data = JSON.stringify({
-                            choices: [{ delta: { content: finalAnswer } }]
-                        });
-                        controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-                        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-                        controller.close();
-                    } catch (error) {
-                        console.error('Hardcore mode error:', error);
-                        const errorData = JSON.stringify({
-                            choices: [{ delta: { content: 'Error: 처리 중 오류가 발생했습니다.' } }]
-                        });
-                        controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
-                        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-                        controller.close();
-                    }
-                }
-            });
+            // @ts-ignore
+            const stream = await openAIFetch(finalMessages, 'gpt-4o', 0.7);
 
             return new Response(stream, {
                 headers: {
@@ -92,16 +44,24 @@ export async function POST(req: NextRequest) {
                     'Connection': 'keep-alive',
                 },
             });
+
+        } else if (mode === 'lite') {
+            // LITE MODE: Use DeepSeek
+            if (finalMessages.length > 0 && finalMessages[0].role !== 'system') {
+                finalMessages.unshift({ role: 'system', content: SYSTEM_PROMPTS.lite });
+            }
+
+        } else if (mode === 'standard') {
+            // STANDARD MODE: Use DeepSeek
+            if (finalMessages.length > 0 && finalMessages[0].role !== 'system') {
+                finalMessages.unshift({ role: 'system', content: SYSTEM_PROMPTS.standard });
+            }
         }
 
-        // Main Streaming Call
+        // All non-hardcore modes use DeepSeek
+        const currentModel = model || 'deepseek-chat';
         // @ts-ignore
         const stream = await deepSeekFetch(finalMessages, currentModel);
-
-        // Create a new stream that we can pipe through to standard response
-        // DeepSeek returns OpenAI-compatible SSE chunks "data: {...}"
-        // We can just pipe specific chunks or just pass-through.
-        // User requested "stream proxy".
 
         return new Response(stream, {
             headers: {
