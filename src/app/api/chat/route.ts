@@ -28,28 +28,60 @@ export async function POST(req: NextRequest) {
 
         // Mode Logic
         if (mode === 'lite') {
-            // Inject Lite system prompt
             if (finalMessages.length > 0 && finalMessages[0].role !== 'system') {
                 finalMessages.unshift({ role: 'system', content: SYSTEM_PROMPTS.lite });
             }
         } else if (mode === 'standard') {
-            // Inject Standard system prompt
             if (finalMessages.length > 0 && finalMessages[0].role !== 'system') {
                 finalMessages.unshift({ role: 'system', content: SYSTEM_PROMPTS.standard });
             }
         } else if (mode === 'hardcore') {
-            // Step 1: Internal Plan (3-bullet outline)
+            // Step 1: Structural Plan (6-line outline)
             const planMessages: Message[] = [
                 { role: 'system', content: SYSTEM_PROMPTS.hardcore_step1 },
                 ...messages
             ];
-
-            // Non-streaming call for plan
             const plan = await deepSeekFetchNonStream(planMessages, currentModel);
 
-            // Step 2: Answer with Plan
-            const systemPrompt = SYSTEM_PROMPTS.hardcore_step2.replace('{PLAN}', plan);
-            finalMessages.unshift({ role: 'system', content: systemPrompt });
+            // Step 2: Generate Answer
+            const answerPrompt = SYSTEM_PROMPTS.hardcore_step2.replace('{PLAN}', plan);
+            const answerMessages: Message[] = [
+                { role: 'system', content: answerPrompt },
+                ...messages
+            ];
+            const answer = await deepSeekFetchNonStream(answerMessages, currentModel);
+
+            // Step 3: Verify (internal check)
+            const verifyPrompt = SYSTEM_PROMPTS.hardcore_step3_verify.replace('{ANSWER}', answer);
+            const verifyMessages: Message[] = [
+                { role: 'system', content: verifyPrompt }
+            ];
+            const verifyResult = await deepSeekFetchNonStream(verifyMessages, currentModel);
+
+            // If verification fails, use corrected version; otherwise use original
+            const finalAnswer = verifyResult.trim() !== 'PASS' ? verifyResult : answer;
+
+            // Return final answer as streaming response
+            // Convert to SSE format
+            const encoder = new TextEncoder();
+            const stream = new ReadableStream({
+                start(controller) {
+                    const data = JSON.stringify({
+                        choices: [{ delta: { content: finalAnswer } }]
+                    });
+                    controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+                    controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+                    controller.close();
+                }
+            });
+
+            return new Response(stream, {
+                headers: {
+                    'Content-Type': 'text/event-stream',
+                    'Cache-Control': 'no-cache',
+                    'Connection': 'keep-alive',
+                },
+            });
         }
 
         // Main Streaming Call

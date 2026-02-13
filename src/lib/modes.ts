@@ -23,8 +23,7 @@ export const SYSTEM_PROMPTS = {
     lite: `You are DeepSea in Lite mode.
 Rules:
 - Maximum 5 sentences
-- Keep explanation concise
-- Avoid deep breakdown or extended reasoning
+- Definition-focused, no deep explanation
 - Minimize speculation
 - If uncertain, say "확인되지 않음" and stop
 
@@ -32,45 +31,84 @@ ${BASE_RULES}`,
 
     standard: `You are DeepSea in Standard mode.
 
-Structure guideline:
-- Provide verified information
-- If estimation is necessary, clearly label it as "추정"
-- If verification is required, add a short "주의사항"
-- Only include sections when relevant
+Fixed Structure:
+1. 핵심 요약 (Core summary)
+2. 세부 설명 (Detailed explanation)
+3. 한계 또는 주의점 (Limitations or cautions)
 
 ${BASE_RULES}`,
 
-    hardcore_step1: `Generate a short 3-bullet outline of the answer structure.
-No reasoning details.
-Structure only.`,
+    hardcore_step1: `Create a concise structural outline:
+- What is the core problem?
+- What dimensions must be analyzed?
+- What structure will the answer follow?
 
-    hardcore_step2: `You are DeepSea. Answer the user's request using the following outline as guidance.
+Maximum 6 lines.
+No detailed reasoning.`,
 
-Outline:
+    hardcore_step2: `You are DeepSea. Answer the user's request using the following structural plan.
+
+Plan:
 {PLAN}
 
-Follow the outline but prioritize factual correctness over the outline.
-Provide comprehensive, well-structured answer.
+Structure:
+1. 핵심 개념 정리 (Core concept clarification)
+2. 구체적 분석 (Specific analysis)
+3. 실전 적용 전략 (Practical application strategy)
+4. 한계 및 주의점 (Limitations and cautions)
+
+Rules:
+- Avoid strong certainty expressions
+- Mark uncertain data as "확인 필요"
+- Prioritize factual correctness over the plan
 
 ${BASE_RULES}`,
+
+    hardcore_step3_verify: `Review the following answer for quality issues:
+
+Answer:
+{ANSWER}
+
+Check only:
+- Logical leaps
+- Overgeneralization
+- Uncertain numbers/facts
+- Ambiguous expressions
+
+If issues found, provide a corrected version. Otherwise, return "PASS".`,
 };
 
 export function detectMode(input: string, currentMode: Mode): Mode {
     if (currentMode !== 'auto') return currentMode;
 
-    // Condition 1: Keywords
-    const hardcoreKeywords = ['근거', '비교', '검증', '최신', '정확히', '출처', '리서치'];
-    const hasKeyword = hardcoreKeywords.some(w => input.toLowerCase().includes(w));
+    const lowerInput = input.toLowerCase();
 
-    // Condition 2: Length
-    const isLong = input.length > 200;
+    // Hardcore keywords (cognitive difficulty indicators)
+    const hardcoreKeywords = [
+        '왜', '원인', '구조', '병목', '전략', '단계적으로',
+        '근거', '비교', '분석', '검증', '설계', '최적화',
+        '구체적으로', '체계적으로', '정리해줘'
+    ];
 
-    // Condition 3: Analytical intent (multiple questions or complex structure)
-    const questionCount = (input.match(/\?/g) || []).length;
-    const hasAnalyticalIntent = questionCount >= 2 || /어떻게|왜|근거|이유/.test(input);
+    // Lite keywords (simple definition queries)
+    const liteKeywords = ['뭐야', '무엇', '정의', '의미'];
 
-    // Escalate if 2+ conditions met
-    const conditions = [hasKeyword, isLong, hasAnalyticalIntent].filter(Boolean).length;
+    // Check for Lite mode (simple definition)
+    const isDefinitionQuery = liteKeywords.some(w => lowerInput.includes(w)) && input.length < 30;
+    if (isDefinitionQuery) return 'lite';
 
-    return conditions >= 2 ? 'hardcore' : 'standard';
+    // Check for Hardcore mode
+    const hasHardcoreKeyword = hardcoreKeywords.some(w => lowerInput.includes(w));
+    const isLongQuery = input.length >= 20;
+    const requiresAnalysis = /코드|수학|아키텍처|정책/.test(lowerInput);
+
+    // Escalate to Hardcore if:
+    // 1. Has hardcore keyword + long query
+    // 2. Requires technical analysis
+    if ((hasHardcoreKeyword && isLongQuery) || requiresAnalysis) {
+        return 'hardcore';
+    }
+
+    // Default to Standard for comparison/explanation queries
+    return 'standard';
 }
