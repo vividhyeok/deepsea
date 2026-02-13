@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Getting Started
+# DeepSea (Phase 1)
 
-First, run the development server:
+DeepSea is a personal AI web platform built with Next.js, TailwindCSS, and DeepSeek API.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Features (Phase 1)
+- **JWT Authentication**: Secure login with HttpOnly cookies.
+- **DeepSeek Streaming**: Real-time chat with DeepSeek models.
+- **Modes**:
+    - **Lite**: Direct chat.
+    - **Standard**: System instructions for accuracy.
+    - **Hardcore**: Two-step reasoning (Plan -> Answer).
+    - **Auto**: Context-aware mode switching.
+- **Local Storage**: Save and load conversations as Markdown files.
+- **Dark Mode UI**: Premium glassmorphism design.
+
+## Project Structure
+```
+/src
+  /app          # Next.js App Router
+  /components   # React Components
+  /lib          # Utilities (JWT, DeepSeek, Modes)
+  /middleware.ts # Route Protection
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Setup & Run
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1.  **Install Dependencies**
+    ```bash
+    npm install
+    ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2.  **Environment Setup**
+    Copy `.env.example` to `.env.local` and fill in your details:
+    ```bash
+    cp .env.example .env.local
+    ```
+    - `DEEPSEEK_API_KEY`: Get from [DeepSeek Platform](https://platform.deepseek.com/).
+    - `APP_USERNAME` / `APP_PASSWORD`: Set your desired login.
+    - `JWT_SECRET_KEY`: Generate a random string (e.g., `openssl rand -hex 32`).
 
-## Learn More
+3.  **Run Development Server**
+    ```bash
+    npm run dev
+    ```
+    Open [http://localhost:3000](http://localhost:3000).
 
-To learn more about Next.js, take a look at the following resources:
+4.  **Build for Production**
+    ```bash
+    npm run build
+    npm start
+    ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Vercel Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1.  Push to GitHub.
+2.  Import project in Vercel.
+3.  Add Environment Variables in Vercel Project Settings.
+4.  Deploy.
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Tech Stack
+- **Framework**: Next.js 15 (App Router)
+- **Styling**: TailwindCSS v4
+- **Auth**: `jose` (JWT)
+- **Icons**: `lucide-react`
+- **Markdown**: `react-markdown`
