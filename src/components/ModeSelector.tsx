@@ -1,6 +1,7 @@
 
 import { Mode, MODES } from '@/lib/modes';
 import { cn } from '@/lib/utils';
+import { ChevronDown } from 'lucide-react';
 
 
 interface ModeSelectorProps {
