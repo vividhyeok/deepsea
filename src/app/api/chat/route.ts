@@ -28,18 +28,17 @@ export async function POST(req: NextRequest) {
 
         // Mode Logic
         if (mode === 'lite') {
-            // Direct pass-through, no system prompt override unless empty
-            // Actually, Lite usually means "just the raw model behavior" or minimal interference.
-            // We'll leave messages as is.
+            // Inject Lite system prompt
+            if (finalMessages.length > 0 && finalMessages[0].role !== 'system') {
+                finalMessages.unshift({ role: 'system', content: SYSTEM_PROMPTS.lite });
+            }
         } else if (mode === 'standard') {
-            // Prepend system prompt if not present? Or just add it.
-            // Usually system prompt should be first.
+            // Inject Standard system prompt
             if (finalMessages.length > 0 && finalMessages[0].role !== 'system') {
                 finalMessages.unshift({ role: 'system', content: SYSTEM_PROMPTS.standard });
             }
         } else if (mode === 'hardcore') {
-            // Step 1: Internal Plan
-            // We need a separate chain for planning.
+            // Step 1: Internal Plan (3-bullet outline)
             const planMessages: Message[] = [
                 { role: 'system', content: SYSTEM_PROMPTS.hardcore_step1 },
                 ...messages
@@ -49,11 +48,7 @@ export async function POST(req: NextRequest) {
             const plan = await deepSeekFetchNonStream(planMessages, currentModel);
 
             // Step 2: Answer with Plan
-            // We inject the plan into the system prompt for the final answer
             const systemPrompt = SYSTEM_PROMPTS.hardcore_step2.replace('{PLAN}', plan);
-
-            // Reset messages for the final call, but with the new system prompt
-            // We should construct the final context.
             finalMessages.unshift({ role: 'system', content: systemPrompt });
         }
 

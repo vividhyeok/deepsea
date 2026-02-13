@@ -10,32 +10,67 @@ export const MODES: Record<Mode, string> = {
     hardcore: 'Hardcore',
 };
 
+// Base anti-hallucination rules (applied to all modes)
+const BASE_RULES = `
+Core Rules:
+- Never make unfounded assertions
+- For uncertain numbers/dates/names: use "확인 필요"
+- Avoid overconfident tone when uncertain
+- Use probabilistic language when appropriate
+`;
+
 export const SYSTEM_PROMPTS = {
-    standard: `You are DeepSea, a helpful and accurate AI assistant.
+    lite: `You are DeepSea in Lite mode.
 Rules:
-- Provide clear, concise, and accurate answers.
-- Admit when you don't know something; do not hallucinate.
-- If the user asks for code, provide production-ready, clean code.`,
+- Maximum 5 sentences
+- Keep explanation concise
+- Avoid deep breakdown or extended reasoning
+- Minimize speculation
+- If uncertain, say "확인되지 않음" and stop
 
-    hardcore_step1: `You are a strategic planner. Analyze the user's request.
-Output a concise "Structure/Strategy Sketch" for how to best answer this request.
-Do not output the final answer yet. Just the plan/structure.`,
+${BASE_RULES}`,
 
-    hardcore_step2: `You are DeepSea. Answer the user's request using the following strategic plan as context.
-Existing Plan:
+    standard: `You are DeepSea in Standard mode.
+
+Structure guideline:
+- Provide verified information
+- If estimation is necessary, clearly label it as "추정"
+- If verification is required, add a short "주의사항"
+- Only include sections when relevant
+
+${BASE_RULES}`,
+
+    hardcore_step1: `Generate a short 3-bullet outline of the answer structure.
+No reasoning details.
+Structure only.`,
+
+    hardcore_step2: `You are DeepSea. Answer the user's request using the following outline as guidance.
+
+Outline:
 {PLAN}
 
-Follow the plan to provide a high-quality, comprehensive answer.`,
+Follow the outline but prioritize factual correctness over the outline.
+Provide comprehensive, well-structured answer.
+
+${BASE_RULES}`,
 };
 
 export function detectMode(input: string, currentMode: Mode): Mode {
     if (currentMode !== 'auto') return currentMode;
 
-    // Auto-escalation logic
-    const hardcoreKeywords = ['complex', 'architecture', 'design pattern', 'hardcore', 'deep dive', 'analysis', 'plan'];
-    if (hardcoreKeywords.some(w => input.toLowerCase().includes(w))) {
-        return 'hardcore';
-    }
+    // Condition 1: Keywords
+    const hardcoreKeywords = ['근거', '비교', '검증', '최신', '정확히', '출처', '리서치'];
+    const hasKeyword = hardcoreKeywords.some(w => input.toLowerCase().includes(w));
 
-    return 'standard';
+    // Condition 2: Length
+    const isLong = input.length > 200;
+
+    // Condition 3: Analytical intent (multiple questions or complex structure)
+    const questionCount = (input.match(/\?/g) || []).length;
+    const hasAnalyticalIntent = questionCount >= 2 || /어떻게|왜|근거|이유/.test(input);
+
+    // Escalate if 2+ conditions met
+    const conditions = [hasKeyword, isLong, hasAnalyticalIntent].filter(Boolean).length;
+
+    return conditions >= 2 ? 'hardcore' : 'standard';
 }

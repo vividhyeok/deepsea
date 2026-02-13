@@ -15,7 +15,6 @@ export default function ChatWindow() {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [mode, setMode] = useState<Mode>('standard');
-    const [outputLength, setOutputLength] = useState<'short' | 'normal' | 'long'>('normal');
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
     const abortControllerRef = useRef<AbortController | null>(null);
@@ -89,20 +88,11 @@ export default function ChatWindow() {
             // We can append `(Please keep the response ${outputLength})` to the last message?
             // Or send a temporary system message.
 
-            const payloadMessages = [...currentMessages];
-            if (outputLength !== 'normal') {
-                // Add a ephemeral system instruction for length
-                payloadMessages.push({
-                    role: 'system',
-                    content: `Please keep your response ${outputLength}.`
-                });
-            }
-
             const res = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    messages: payloadMessages,
+                    messages: currentMessages,
                     mode: mode,
                 }),
                 signal: abortControllerRef.current.signal,
@@ -200,21 +190,6 @@ export default function ChatWindow() {
                 </div>
 
                 <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2 bg-gray-900 border border-gray-700 rounded-lg p-1">
-                        <button
-                            onClick={() => setOutputLength('short')}
-                            className={`px-2 py-0.5 text-xs rounded ${outputLength === 'short' ? 'bg-blue-600' : 'text-gray-400 hover:text-white'}`}
-                        >S</button>
-                        <button
-                            onClick={() => setOutputLength('normal')}
-                            className={`px-2 py-0.5 text-xs rounded ${outputLength === 'normal' ? 'bg-blue-600' : 'text-gray-400 hover:text-white'}`}
-                        >M</button>
-                        <button
-                            onClick={() => setOutputLength('long')}
-                            className={`px-2 py-0.5 text-xs rounded ${outputLength === 'long' ? 'bg-blue-600' : 'text-gray-400 hover:text-white'}`}
-                        >L</button>
-                    </div>
-
                     <ModeSelector currentMode={mode} onChange={setMode} />
 
                     <div className="h-6 w-px bg-gray-800 mx-2" />
