@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Message } from '@/lib/deepseek';
 import { cn } from '@/lib/utils';
-import { Copy, RefreshCw, Pencil, Check } from 'lucide-react';
+import { Copy, RefreshCw, Pencil, Check, Download } from 'lucide-react';
 import { useState } from 'react';
 import Image from 'next/image';
 
@@ -12,9 +12,10 @@ interface MessageItemProps {
     isStreaming?: boolean;
     onRegenerate?: () => void;
     onEdit?: (newContent: string) => void;
+    onExport?: () => void;
 }
 
-export default function MessageItem({ message, isStreaming, onRegenerate, onEdit }: MessageItemProps) {
+export default function MessageItem({ message, isStreaming, onRegenerate, onEdit, onExport }: MessageItemProps) {
     const isUser = message.role === 'user';
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(message.content);
@@ -70,6 +71,11 @@ export default function MessageItem({ message, isStreaming, onRegenerate, onEdit
                             {!isStreaming && onRegenerate && (
                                 <button onClick={onRegenerate} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Regenerate">
                                     <RefreshCw className="w-3.5 h-3.5" />
+                                </button>
+                            )}
+                            {!isStreaming && onExport && (
+                                <button onClick={onExport} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Export Message">
+                                    <Download className="w-3.5 h-3.5" />
                                 </button>
                             )}
                         </div>
