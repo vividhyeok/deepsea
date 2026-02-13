@@ -1,11 +1,7 @@
 
 import { Mode, MODES } from '@/lib/modes';
 import { cn } from '@/lib/utils';
-import { Fragment } from 'react';
-import { Check, ChevronDown } from 'lucide-react';
-import { Listbox, Transition } from '@headlessui/react'; // Wait, I didn't install headlessui.
-// "UI deps: Phase 1 should be Tailwind + lucide-react only. Do not add shadcn/headless UI."
-// I must implement a custom dropdown using standard React/Tailwind.
+
 
 interface ModeSelectorProps {
     currentMode: Mode;
@@ -33,4 +29,3 @@ export default function ModeSelector({ currentMode, onChange, className }: ModeS
         </div>
     );
 }
-// Actually, native select is ugly. I can make a custom one easily with standard React state.
