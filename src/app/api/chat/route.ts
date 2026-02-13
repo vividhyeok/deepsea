@@ -64,9 +64,11 @@ export async function POST(req: NextRequest) {
 
 async function executeHardcoreMode(messages: Message[], userInput: string, model: string) {
     try {
-        const startTime = Date.now();
+        const totalStartTime = Date.now();
+        console.log('[HARDCORE] Starting execution...');
 
         // Step 1: PLAN (DeepSeek, JSON output, max 150 tokens)
+        const step1Start = Date.now();
         const planPrompt = SYSTEM_PROMPTS.hardcore_plan.replace('{user_input}', userInput);
         const planOutput = await deepSeekFetchNonStream(
             [{ role: 'user', content: planPrompt }],
@@ -74,12 +76,15 @@ async function executeHardcoreMode(messages: Message[], userInput: string, model
             0.7,
             150
         );
+        const step1Latency = Date.now() - step1Start;
+        console.log(`[HARDCORE] Step 1 (Plan): ${step1Latency}ms`);
 
         // Parse Plan JSON
         let plan: PlanResult;
         try {
             plan = JSON.parse(planOutput);
         } catch (e) {
+            console.warn('[HARDCORE] Plan JSON parse failed, using fallback');
             // Fallback if JSON parsing fails
             plan = {
                 task_type: 'explanation',
@@ -91,7 +96,8 @@ async function executeHardcoreMode(messages: Message[], userInput: string, model
             };
         }
 
-        // Step 2: DRAFT (DeepSeek, full answer, max 800 tokens)
+        // Step 2: DRAFT (DeepSeek, full answer, max 600 tokens - reduced from 800)
+        const step2Start = Date.now();
         const draftPrompt = SYSTEM_PROMPTS.hardcore_draft
             .replace('{user_input}', userInput)
             .replace('{plan_output}', JSON.stringify(plan, null, 2));
@@ -99,10 +105,41 @@ async function executeHardcoreMode(messages: Message[], userInput: string, model
             [{ role: 'user', content: draftPrompt }],
             model,
             0.7,
-            800
+            600  // Reduced from 800 to speed up
         );
+        const step2Latency = Date.now() - step2Start;
+        console.log(`[HARDCORE] Step 2 (Draft): ${step2Latency}ms`);
+
+        // Check if we're approaching timeout
+        const elapsedBeforeRewrite = Date.now() - totalStartTime;
+        console.log(`[HARDCORE] Elapsed before Rewrite: ${elapsedBeforeRewrite}ms`);
+
+        if (elapsedBeforeRewrite > 8000) {
+            // If already over 8 seconds, skip Rewrite and return Draft
+            console.warn('[HARDCORE] Timeout risk detected, returning Draft directly');
+            const encoder = new TextEncoder();
+            const stream = new ReadableStream({
+                start(controller) {
+                    const data = JSON.stringify({
+                        choices: [{ delta: { content: draftOutput } }]
+                    });
+                    controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+                    controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+                    controller.close();
+                }
+            });
+
+            return new Response(stream, {
+                headers: {
+                    'Content-Type': 'text/event-stream',
+                    'Cache-Control': 'no-cache',
+                    'Connection': 'keep-alive',
+                },
+            });
+        }
 
         // Step 3: REWRITE (DeepSeek, streaming)
+        const step3Start = Date.now();
         const rewritePrompt = SYSTEM_PROMPTS.hardcore_rewrite
             .replace('{user_input}', userInput)
             .replace('{plan_output}', JSON.stringify(plan, null, 2))
@@ -115,11 +152,14 @@ async function executeHardcoreMode(messages: Message[], userInput: string, model
             0.7
         );
 
-        // Log performance
-        const totalTime = Date.now() - startTime;
-        console.log('[HARDCORE]', {
-            steps: 3,
-            total_time_ms: totalTime,
+        // Log total time (approximate, since Rewrite is streaming)
+        const totalTime = Date.now() - totalStartTime;
+        console.log(`[HARDCORE] Step 3 (Rewrite) started at: ${Date.now() - step3Start}ms`);
+        console.log(`[HARDCORE] Total time before streaming: ${totalTime}ms`);
+        console.log(`[HARDCORE] Summary:`, {
+            step_1_plan_ms: step1Latency,
+            step_2_draft_ms: step2Latency,
+            total_before_stream_ms: totalTime,
             task_type: plan.task_type,
             complexity: plan.complexity_level,
         });
@@ -133,7 +173,7 @@ async function executeHardcoreMode(messages: Message[], userInput: string, model
         });
 
     } catch (error: any) {
-        console.error('Hardcore mode error:', error);
+        console.error('[HARDCORE] Error:', error);
 
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
