@@ -26,6 +26,15 @@ function buildMessages(messages: Message[], mode: Exclude<Mode, 'auto'>): Messag
   ];
 }
 
+function resolveMode(requestedMode: Mode, content: string): Exclude<Mode, 'auto'> {
+  if (requestedMode === 'auto') {
+    const detected = detectMode(content, 'auto');
+    return detected === 'auto' ? 'standard' : detected;
+  }
+
+  return requestedMode;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const token = req.cookies.get('token')?.value;
@@ -44,7 +53,7 @@ export async function POST(req: NextRequest) {
     const lastMessage = messages[messages.length - 1];
 
     const requestedMode: Mode = body?.mode || 'auto';
-    const mode: Exclude<Mode, 'auto'> = requestedMode === 'auto' ? detectMode(lastMessage?.content ?? '', 'auto') : requestedMode;
+    const mode = resolveMode(requestedMode, lastMessage?.content ?? '');
 
     const stream = await deepSeekFetch(
       buildMessages(messages, mode),
