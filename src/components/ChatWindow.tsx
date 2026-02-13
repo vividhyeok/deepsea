@@ -237,10 +237,13 @@ export default function ChatWindow() {
             </header>
 
             {/* Main Content Area */}
-            <main className="flex-1 overflow-y-auto pt-16 pb-32 scroll-smooth">
+            <main className={cn(
+                "flex-1 scroll-smooth",
+                isInitialState ? "overflow-hidden flex flex-col items-center justify-center" : "overflow-y-auto pt-16 pb-32"
+            )}>
                 {isInitialState ? (
                     // INITIAL STATE: Centered Logo + Input
-                    <div className="flex flex-col items-center justify-center min-h-[80vh] px-4 animate-in fade-in duration-500">
+                    <div className="w-full h-full flex flex-col items-center justify-center px-4 animate-in fade-in duration-500">
                         <div className="w-24 h-24 md:w-32 md:h-32 relative mb-6">
                             <Image src="/logo.png" alt="DeepSea" fill className="object-contain drop-shadow-sm" priority unoptimized />
                         </div>
