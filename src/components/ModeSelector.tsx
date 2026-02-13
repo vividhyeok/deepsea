@@ -1,7 +1,7 @@
 
 import { Mode, MODES } from '@/lib/modes';
 import { cn } from '@/lib/utils';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Sparkles } from 'lucide-react';
 
 
 interface ModeSelectorProps {
@@ -15,18 +15,26 @@ export default function ModeSelector({ currentMode, onChange, className }: ModeS
 
     return (
         <div className={cn("relative group", className)}>
-            <select
-                value={currentMode}
-                onChange={(e) => onChange(e.target.value as Mode)}
-                className="appearance-none bg-gray-900 border border-gray-700 text-gray-200 py-1 pl-3 pr-8 rounded leading-tight focus:outline-none focus:bg-gray-800 focus:border-gray-500 text-sm"
-            >
-                {modes.map(m => (
-                    <option key={m} value={m}>{MODES[m]}</option>
-                ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                <ChevronDown className="h-4 w-4" />
+            <div className="flex items-center space-x-1.5 px-2 py-1 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-200 transition-colors cursor-pointer group-focus-within:ring-2 group-focus-within:ring-blue-500/20">
+                <Sparkles className={cn("w-3.5 h-3.5",
+                    currentMode === 'hardcore' ? "text-purple-500" :
+                        currentMode === 'auto' ? "text-blue-500" : "text-gray-400"
+                )} />
+                <select
+                    value={currentMode}
+                    onChange={(e) => onChange(e.target.value as Mode)}
+                    className="appearance-none bg-transparent text-gray-700 font-medium text-xs focus:outline-none cursor-pointer pr-4 uppercase tracking-wide"
+                >
+                    {modes.map(m => (
+                        <option key={m} value={m}>{MODES[m]}</option>
+                    ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                    <ChevronDown className="h-3 w-3" />
+                </div>
             </div>
+
+            {/* Tooltip for mode explanation could go here */}
         </div>
     );
 }
