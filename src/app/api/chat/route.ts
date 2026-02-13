@@ -8,7 +8,7 @@ export const runtime = 'edge';
 const MODE_OPTIONS: Record<Exclude<Mode, 'auto'>, { maxTokens: number; timeoutMs: number; temperature: number }> = {
   lite: { maxTokens: 520, timeoutMs: 8500, temperature: 0.2 },
   standard: { maxTokens: 620, timeoutMs: 9000, temperature: 0.25 },
-  hardcore: { maxTokens: 700, timeoutMs: 9000, temperature: 0.2 },
+  hardcore: { maxTokens: 750, timeoutMs: 9500, temperature: 0.35 },
 };
 
 function compactMessages(messages: Message[]) {
