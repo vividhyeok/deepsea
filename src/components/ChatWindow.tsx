@@ -7,7 +7,7 @@ import { Mode } from '@/lib/modes';
 import { generateMarkdown, parseMarkdown } from '@/lib/storage';
 import MessageItem from './MessageItem';
 import ModeSelector from './ModeSelector';
-import { Send, Download, Upload, LogOut, StopCircle, RefreshCw, ArrowRight } from 'lucide-react';
+import { Send, Download, Upload, LogOut, StopCircle, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function ChatWindow() {
@@ -72,22 +72,11 @@ export default function ChatWindow() {
         setIsLoading(true);
         abortControllerRef.current = new AbortController();
 
-        // Prepare messages
         let currentMessages = newMessages || [...messages, { role: 'user', content }];
         setMessages(currentMessages);
         setInput('');
 
         try {
-            // Append length instruction if needed, or handle in API.
-            // API doesn't know about outputLength state. 
-            // We can append a system instruction or modify the last user message metadata?
-            // Or just append it to the prompt.
-            // "Output Length Control: Presets: short, normal, long"
-            // Simplest is to append to the prompt internally or send as a parameter if API supported it.
-            // Our API supports `mode`, `messages`. 
-            // We can append `(Please keep the response ${outputLength})` to the last message?
-            // Or send a temporary system message.
-
             const res = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -101,24 +90,20 @@ export default function ChatWindow() {
             if (!res.ok) throw new Error(res.statusText);
             if (!res.body) throw new Error('No response body');
 
-            // Create a placeholder for assistant message
             setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
             const reader = res.body.getReader();
             const decoder = new TextDecoder();
             let assistantMessage = '';
-            let buffer = ''; // Buffer for incomplete SSE lines
+            let buffer = '';
 
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
 
-                // Decode chunk and append to buffer
                 buffer += decoder.decode(value, { stream: true });
-
-                // Split by newlines but keep incomplete line in buffer
                 const lines = buffer.split('\n');
-                buffer = lines.pop() || ''; // Keep last incomplete line
+                buffer = lines.pop() || '';
 
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
@@ -131,13 +116,10 @@ export default function ChatWindow() {
                             if (content) {
                                 assistantMessage += content;
                             }
-                        } catch (e) {
-                            // Ignore malformed JSON
-                        }
+                        } catch (e) { }
                     }
                 }
 
-                // Batch update: only update state after processing all lines in chunk
                 if (assistantMessage) {
                     setMessages(prev => {
                         const newMsg = [...prev];
@@ -163,139 +145,124 @@ export default function ChatWindow() {
     };
 
     const handleRegenerate = () => {
-        // Regenerate last assistant message
-        // Remove last assistant message
         const lastMsg = messages[messages.length - 1];
         if (lastMsg.role === 'assistant') {
             const newHistory = messages.slice(0, -1);
-            // We need to trigger send but without adding a new user message.
-            // We just re-send the history.
-            // wait, sendMessage assumes adding user content OR using newMessages.
-            // If we pass newMessages, it sets state.
-            // But we want to call API with the *last user message* being the trigger.
             setMessages(newHistory);
-            // Trigger fetch with newHistory
-            // We need to reuse the logic in sendMessage but specialized.
-            // Actually, sendMessage can just take the history.
-            // But sendMessage logic appends 'user' message if provided.
-            // Let's refactor sendMessage to be more flexible or just copy logic.
-            // Simpler: Just recursively call a refined request function.
-            // I will just copy-paste logic for safety or make sendMessage accept "trigger immediately with these messages".
-
-            // Hack: call sendMessage with empty string but `newMessages` set to history.
-            // Ensure sendMessage doesn't append empty user msg if newMessages is passed.
-            // My implementation: `if ((!content.trim() && !newMessages)) return;`
-            // `let currentMessages = newMessages || ...`
-            // So passing `newMessages` works.
             sendMessage('', newHistory);
         }
     };
 
     return (
-        <div className="flex flex-col h-screen bg-gray-950 text-gray-100 font-sans">
-            {/* Header */}
-            <header className="flex items-center justify-between p-4 border-b border-gray-800 bg-gray-900/50 backdrop-blur-md sticky top-0 z-10">
-                <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse" />
-                    <h1 className="font-bold text-lg tracking-tight">DeepSea</h1>
-                </div>
+        <div className="flex flex-col h-screen bg-gray-900 text-gray-100">
+            {/* Minimal Header */}
+            <header className="border-b border-gray-800 bg-gray-900/95 backdrop-blur-sm sticky top-0 z-10">
+                <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                        <h1 className="font-semibold text-sm tracking-tight">DeepSea</h1>
+                    </div>
 
-                <div className="flex items-center space-x-4">
-                    <ModeSelector currentMode={mode} onChange={setMode} />
-
-                    <div className="h-6 w-px bg-gray-800 mx-2" />
-
-                    <button onClick={handleSave} className="p-2 hover:bg-gray-800 rounded-full text-gray-400 hover:text-white transition-colors" title="Save">
-                        <Download className="w-5 h-5" />
-                    </button>
-                    <label className="p-2 hover:bg-gray-800 rounded-full text-gray-400 hover:text-white transition-colors cursor-pointer" title="Load">
-                        <Upload className="w-5 h-5" />
-                        <input type="file" className="hidden" accept=".md" onChange={handleLoad} />
-                    </label>
-                    <button onClick={handleLogout} className="p-2 hover:bg-gray-800 rounded-full text-red-500 hover:text-red-400 transition-colors" title="Logout">
-                        <LogOut className="w-5 h-5" />
-                    </button>
+                    <div className="flex items-center space-x-3">
+                        <ModeSelector currentMode={mode} onChange={setMode} />
+                        <div className="h-4 w-px bg-gray-700" />
+                        <button onClick={handleSave} className="p-1.5 hover:bg-gray-800 rounded text-gray-400 hover:text-white transition-colors" title="Save">
+                            <Download className="w-4 h-4" />
+                        </button>
+                        <label className="p-1.5 hover:bg-gray-800 rounded text-gray-400 hover:text-white transition-colors cursor-pointer" title="Load">
+                            <Upload className="w-4 h-4" />
+                            <input type="file" className="hidden" accept=".md" onChange={handleLoad} />
+                        </label>
+                        <button onClick={handleLogout} className="p-1.5 hover:bg-gray-800 rounded text-red-400 hover:text-red-300 transition-colors" title="Logout">
+                            <LogOut className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
             </header>
 
-            {/* Messages */}
-            <main className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scroll-smooth">
-                {messages.length === 0 && (
-                    <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-4">
-                        <div className="w-16 h-16 bg-gray-900 rounded-2xl flex items-center justify-center border border-gray-800">
-                            <span className="text-3xl">🐋</span>
+            {/* Messages - Centered */}
+            <main className="flex-1 overflow-y-auto">
+                <div className="max-w-4xl mx-auto px-4 py-8">
+                    {messages.length === 0 && (
+                        <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-4 py-20">
+                            <div className="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center border border-gray-700">
+                                <span className="text-3xl">🐋</span>
+                            </div>
+                            <p className="text-sm">Welcome to DeepSea. Select a mode and start chatting.</p>
                         </div>
-                        <p>Welcome to DeepSea. Select a mode and start chatting.</p>
-                    </div>
-                )}
+                    )}
 
-                {messages.map((msg, idx) => (
-                    <MessageItem
-                        key={idx}
-                        message={msg}
-                        isStreaming={isLoading && idx === messages.length - 1 && msg.role === 'assistant'}
-                        onRegenerate={idx === messages.length - 1 && msg.role === 'assistant' ? handleRegenerate : undefined}
-                    />
-                ))}
-                {isLoading && mode === 'hardcore' && messages.length > 0 && messages[messages.length - 1].role === 'user' && (
-                    <div className="flex w-full mb-6 justify-start">
-                        <div className="bg-gray-800/50 text-gray-400 rounded-lg p-3 text-sm animate-pulse border border-gray-700">
-                            Thinking...
+                    {messages.map((msg, idx) => (
+                        <MessageItem
+                            key={idx}
+                            message={msg}
+                            isStreaming={isLoading && idx === messages.length - 1 && msg.role === 'assistant'}
+                            onRegenerate={idx === messages.length - 1 && msg.role === 'assistant' ? handleRegenerate : undefined}
+                        />
+                    ))}
+
+                    {isLoading && mode === 'hardcore' && messages.length > 0 && messages[messages.length - 1].role === 'user' && (
+                        <div className="flex w-full mb-6 justify-start">
+                            <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-gray-400 rounded-lg px-4 py-2 text-sm animate-pulse border border-blue-500/20">
+                                Thinking...
+                            </div>
                         </div>
-                    </div>
-                )}
-                <div ref={messagesEndRef} />
+                    )}
+
+                    <div ref={messagesEndRef} />
+                </div>
             </main>
 
-            {/* Input */}
-            <footer className="p-4 border-t border-gray-800 bg-gray-900/50 backdrop-blur-md">
-                <div className="max-w-4xl mx-auto flex items-end space-x-2">
-                    {!isLoading && messages.length > 0 && messages[messages.length - 1].role === 'assistant' && (
-                        <button
-                            onClick={handleContinue}
-                            className="p-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 transition-colors"
-                            title="Continue"
-                        >
-                            <ArrowRight className="w-5 h-5" />
-                        </button>
-                    )}
+            {/* Input - Fixed Bottom, Centered */}
+            <footer className="border-t border-gray-800 bg-gray-900/95 backdrop-blur-sm">
+                <div className="max-w-4xl mx-auto px-4 py-4">
+                    <div className="flex items-end space-x-2 mb-2">
+                        {!isLoading && messages.length > 0 && messages[messages.length - 1].role === 'assistant' && (
+                            <button
+                                onClick={handleContinue}
+                                className="p-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 transition-colors"
+                                title="Continue"
+                            >
+                                <ArrowRight className="w-4 h-4" />
+                            </button>
+                        )}
 
-                    <div className="flex-1 bg-gray-950 border border-gray-700 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500/50 shadow-lg relative">
-                        <textarea
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    sendMessage(input);
-                                }
-                            }}
-                            placeholder="Type a message..."
-                            className="w-full bg-transparent p-4 text-gray-100 focus:outline-none resize-none max-h-48"
-                            rows={1}
-                            style={{ minHeight: '56px' }}
-                        />
+                        <div className="flex-1 bg-gray-800 border border-gray-700 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500/50 relative">
+                            <textarea
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        sendMessage(input);
+                                    }
+                                }}
+                                placeholder="Message DeepSea..."
+                                className="w-full bg-transparent px-4 py-3 text-gray-100 placeholder-gray-500 focus:outline-none resize-none max-h-48"
+                                rows={1}
+                            />
+                        </div>
+
+                        {isLoading ? (
+                            <button
+                                onClick={stopGeneration}
+                                className="p-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white transition-all"
+                            >
+                                <StopCircle className="w-5 h-5" />
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => sendMessage(input)}
+                                disabled={!input.trim()}
+                                className="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                            >
+                                <Send className="w-5 h-5" />
+                            </button>
+                        )}
                     </div>
-
-                    {isLoading ? (
-                        <button
-                            onClick={stopGeneration}
-                            className="p-3 rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-lg transition-transform transform active:scale-95"
-                        >
-                            <StopCircle className="w-5 h-5" />
-                        </button>
-                    ) : (
-                        <button
-                            onClick={() => sendMessage(input)}
-                            disabled={!input.trim()}
-                            className="p-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-transform transform active:scale-95"
-                        >
-                            <Send className="w-5 h-5" />
-                        </button>
-                    )}
-                </div>
-                <div className="text-center text-xs text-gray-500 mt-2">
-                    AI can make mistakes. Check important info.
+                    <div className="text-center text-xs text-gray-500">
+                        AI can make mistakes. Check important info.
+                    </div>
                 </div>
             </footer>
         </div>
