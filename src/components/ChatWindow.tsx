@@ -107,32 +107,43 @@ export default function ChatWindow() {
             const reader = res.body.getReader();
             const decoder = new TextDecoder();
             let assistantMessage = '';
+            let buffer = ''; // Buffer for incomplete SSE lines
 
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
-                const chunk = decoder.decode(value, { stream: true });
 
-                // Parse SSE if needed. DeepSeek returns "data: JSON\n\n".
-                // Use a simple buffer/parser approach.
-                const lines = chunk.split('\n');
+                // Decode chunk and append to buffer
+                buffer += decoder.decode(value, { stream: true });
+
+                // Split by newlines but keep incomplete line in buffer
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || ''; // Keep last incomplete line
+
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
-                        const dataStr = line.slice(6);
-                        if (dataStr.trim() === '[DONE]') continue;
+                        const dataStr = line.slice(6).trim();
+                        if (dataStr === '[DONE]') continue;
+
                         try {
                             const data = JSON.parse(dataStr);
                             const content = data.choices[0]?.delta?.content || '';
                             if (content) {
                                 assistantMessage += content;
-                                setMessages(prev => {
-                                    const newMsg = [...prev];
-                                    newMsg[newMsg.length - 1] = { role: 'assistant', content: assistantMessage };
-                                    return newMsg;
-                                });
                             }
-                        } catch (e) {/* ignore partial json */ }
+                        } catch (e) {
+                            // Ignore malformed JSON
+                        }
                     }
+                }
+
+                // Batch update: only update state after processing all lines in chunk
+                if (assistantMessage) {
+                    setMessages(prev => {
+                        const newMsg = [...prev];
+                        newMsg[newMsg.length - 1] = { role: 'assistant', content: assistantMessage };
+                        return newMsg;
+                    });
                 }
             }
 
