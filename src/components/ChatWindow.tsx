@@ -214,8 +214,8 @@ export default function ChatWindow() {
                                 onClick={handleNewChat}
                                 className="cursor-pointer flex items-center space-x-2 hover:bg-gray-100 px-2 py-1 rounded-lg transition-colors"
                             >
-                                <div className="w-8 h-8 relative">
-                                    <Image src="/logo.png" alt="Logo" fill className="object-contain" unoptimized />
+                                <div className="w-8 h-8 relative overflow-hidden rounded-md">
+                                    <Image src="/logo.png" alt="Logo" fill className="object-contain scale-[1.7]" unoptimized />
                                 </div>
                             </div>
                         )}
