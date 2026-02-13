@@ -7,39 +7,35 @@
   --color-brand-foreground: var(--brand-foreground);
 }
 
-/* Light Mode Theme (DeepSeek/Google Style) */
 :root {
-  --background: #ffffff;
-  --foreground: #1f2937;
-  /* gray-800 */
-  --brand: #3b82f6;
-  /* blue-500 from logo */
+  --background: #f7f7f8;
+  --foreground: #111827;
+  --brand: #111827;
   --brand-foreground: #ffffff;
 }
 
+html,
 body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
-/* Custom Scrollbar */
+* {
+  box-sizing: border-box;
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
 ::-webkit-scrollbar-thumb {
-  background: #e5e7eb;
-  /* gray-200 */
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
+  border-radius: 9999px;
   background: #d1d5db;
-  /* gray-300 */
 }

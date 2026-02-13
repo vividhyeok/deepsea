@@ -1,119 +1,104 @@
-
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { Message } from '@/lib/deepseek';
-import { cn } from '@/lib/utils';
-import { Copy, RefreshCw, Pencil, Check, Download } from 'lucide-react';
 import { useState } from 'react';
 import Image from 'next/image';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Check, Copy, Download, Pencil, RefreshCw } from 'lucide-react';
+import { Message } from '@/lib/deepseek';
+import { cn } from '@/lib/utils';
 
 interface MessageItemProps {
-    message: Message;
-    isStreaming?: boolean;
-    onRegenerate?: () => void;
-    onEdit?: (newContent: string) => void;
-    onExport?: () => void;
+  message: Message;
+  isStreaming?: boolean;
+  onRegenerate?: () => void;
+  onEdit?: (newContent: string) => void;
+  onExport?: () => void;
 }
 
 export default function MessageItem({ message, isStreaming, onRegenerate, onEdit, onExport }: MessageItemProps) {
-    const isUser = message.role === 'user';
-    const [isEditing, setIsEditing] = useState(false);
-    const [editContent, setEditContent] = useState(message.content);
-    const [copied, setCopied] = useState(false);
+  const isUser = message.role === 'user';
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(message.content);
+  const [copied, setCopied] = useState(false);
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(message.content);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
+  const handleCopy = () => {
+    navigator.clipboard.writeText(message.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
+  };
 
-    const handleSaveEdit = () => {
-        if (onEdit) {
-            onEdit(editContent);
-            setIsEditing(false);
-        }
-    };
-
-    return (
-        <div className={cn(
-            "flex w-full mb-8",
-            isUser ? "justify-end" : "justify-start"
-        )}>
-            <div className={cn(
-                "flex max-w-[90%] md:max-w-[85%] lg:max-w-[80%]",
-                isUser ? "flex-row-reverse" : "flex-row"
-            )}>
-                {/* Avatar */}
-                <div className={cn(
-                    "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border border-gray-100",
-                    isUser ? "ml-4 bg-gray-200" : "mr-4 bg-white"
-                )}>
-                    {isUser ? (
-                        <div className="text-gray-500 text-xs font-bold">YOU</div>
-                    ) : (
-                        <Image src="/logo.png" alt="DeepSea" width={32} height={32} className="object-cover" unoptimized />
-                    )}
-                </div>
-
-                {/* Content Bubble */}
-                <div className={cn(
-                    "relative group px-5 py-3.5 rounded-2xl text-[15px] leading-7 shadow-sm",
-                    isUser
-                        ? "bg-[#f3f4f6] text-gray-800 rounded-tr-sm"
-                        : "bg-white text-gray-800 border border-gray-100 rounded-tl-sm ring-1 ring-gray-900/5"
-                )}>
-                    {/* Role label & Actions (Assistant only) */}
-                    {!isUser && !isEditing && (
-                        <div className="absolute -bottom-6 left-0 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={handleCopy} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Copy">
-                                {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-                            </button>
-                            {!isStreaming && onRegenerate && (
-                                <button onClick={onRegenerate} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Regenerate">
-                                    <RefreshCw className="w-3.5 h-3.5" />
-                                </button>
-                            )}
-                            {!isStreaming && onExport && (
-                                <button onClick={onExport} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Export Message">
-                                    <Download className="w-3.5 h-3.5" />
-                                </button>
-                            )}
-                        </div>
-                    )}
-
-                    {/* User Actions */}
-                    {isUser && !isEditing && (
-                        <div className="absolute -bottom-6 right-0 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => setIsEditing(true)} className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600" title="Edit">
-                                <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Content */}
-                    {isEditing ? (
-                        <div className="flex flex-col space-y-2 min-w-[300px]">
-                            <textarea
-                                value={editContent}
-                                onChange={(e) => setEditContent(e.target.value)}
-                                className="w-full bg-white border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                                rows={4}
-                            />
-                            <div className="flex justify-end space-x-2">
-                                <button onClick={() => setIsEditing(false)} className="text-xs px-3 py-1.5 bg-gray-100 text-gray-600 rounded-md hover:bg-gray-200 font-medium">Cancel</button>
-                                <button onClick={handleSaveEdit} className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium">Save</button>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="prose prose-slate max-w-none break-words dark:prose-invert">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                {message.content}
-                            </ReactMarkdown>
-                            {isStreaming && <span className="inline-block w-2 h-4 ml-1 bg-blue-500 animate-pulse align-middle" />}
-                        </div>
-                    )}
-                </div>
-            </div>
+  return (
+    <div className={cn('group mb-5 flex w-full', isUser ? 'justify-end' : 'justify-start')}>
+      <div className={cn('flex w-full max-w-[95%] gap-3 md:max-w-[88%]', isUser ? 'flex-row-reverse' : 'flex-row')}>
+        <div className="mt-1 h-7 w-7 shrink-0 overflow-hidden rounded-full border border-gray-200 bg-white">
+          {isUser ? (
+            <div className="flex h-full items-center justify-center text-[10px] font-semibold text-gray-600">ME</div>
+          ) : (
+            <Image src="/logo.png" alt="로고" width={28} height={28} unoptimized />
+          )}
         </div>
-    );
+
+        <div
+          className={cn(
+            'w-full rounded-2xl border px-4 py-3 text-[15px] leading-7 shadow-sm',
+            isUser ? 'border-gray-200 bg-white' : 'border-transparent bg-transparent'
+          )}
+        >
+          {isEditing ? (
+            <div className="space-y-2">
+              <textarea
+                value={editContent}
+                onChange={(event) => setEditContent(event.target.value)}
+                rows={4}
+                className="w-full rounded-md border border-gray-200 p-2 text-sm outline-none focus:border-gray-400"
+              />
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setIsEditing(false)} className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600">
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    onEdit?.(editContent);
+                    setIsEditing(false);
+                  }}
+                  className="rounded-md bg-gray-900 px-2 py-1 text-xs text-white"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="prose prose-sm max-w-none break-words text-gray-800">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                {isStreaming && <span className="ml-1 inline-block h-4 w-2 animate-pulse bg-gray-700 align-middle" />}
+              </div>
+
+              <div className={cn('mt-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100', isUser ? 'justify-end' : 'justify-start')}>
+                {!isUser && (
+                  <button onClick={handleCopy} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700" title="Copy">
+                    {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+                  </button>
+                )}
+                {!isUser && !isStreaming && onRegenerate && (
+                  <button onClick={onRegenerate} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700" title="Regenerate">
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {!isUser && !isStreaming && onExport && (
+                  <button onClick={onExport} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700" title="Export">
+                    <Download className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {isUser && (
+                  <button onClick={() => setIsEditing(true)} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700" title="Edit">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }

@@ -4,7 +4,7 @@ import { SignJWT, jwtVerify } from 'jose';
 const SECRET_KEY = process.env.JWT_SECRET_KEY || 'default-secret-key-change-me';
 const key = new TextEncoder().encode(SECRET_KEY);
 
-export async function signJWT(payload: any) {
+export async function signJWT(payload: Record<string, unknown>) {
   return await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -18,7 +18,7 @@ export async function verifyJWT(token: string) {
       algorithms: ['HS256'],
     });
     return payload;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
