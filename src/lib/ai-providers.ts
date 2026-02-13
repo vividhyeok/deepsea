@@ -45,12 +45,8 @@ async function deepSeekRequest(payload: object, timeoutMs: number) {
   }
 }
 
-export async function deepSeekFetch(
-  messages: Message[],
-  model: string,
-  options: DeepSeekOptions = {}
-) {
-  const { temperature = 0.35, maxTokens = 820, timeoutMs = 22000 } = options;
+export async function deepSeekFetch(messages: Message[], model: string, options: DeepSeekOptions = {}) {
+  const { temperature = 0.25, maxTokens = 620, timeoutMs = 9000 } = options;
 
   const response = await deepSeekRequest(
     {
@@ -75,7 +71,7 @@ export async function deepSeekFetchNonStream(
   model: string,
   options: DeepSeekOptions = {}
 ): Promise<string> {
-  const { temperature = 0.35, maxTokens = 520, timeoutMs = 18000 } = options;
+  const { temperature = 0.25, maxTokens = 620, timeoutMs = 9000 } = options;
 
   const response = await deepSeekRequest(
     {

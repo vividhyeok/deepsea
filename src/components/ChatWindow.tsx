@@ -3,15 +3,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowRight, Download, LogOut, Plus, Send, Square, Upload } from 'lucide-react';
+import { ArrowRight, LogOut, Plus, Send, Square } from 'lucide-react';
 import MessageItem from './MessageItem';
 import ModeSelector from './ModeSelector';
 import { Message } from '@/lib/deepseek';
-import { Mode } from '@/lib/modes';
-import { generateMarkdown, parseMarkdown } from '@/lib/storage';
+import { MODES, Mode } from '@/lib/modes';
 import { cn } from '@/lib/utils';
 
-const CLIENT_TIMEOUT_MS = 26000;
+const CLIENT_TIMEOUT_MS = 9500;
 
 export default function ChatWindow() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -52,34 +51,6 @@ export default function ChatWindow() {
     setMode('auto');
     setInput('');
     stopGeneration();
-  };
-
-  const handleSave = () => {
-    const markdown = generateMarkdown({ messages, mode, date: new Date().toISOString() });
-    const blob = new Blob([markdown], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `대화기록-${new Date().toISOString().slice(0, 10)}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleLoad = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (loadEvent) => {
-      const text = loadEvent.target?.result as string;
-      const data = parseMarkdown(text);
-      setMessages(data.messages);
-      setMode(data.mode);
-    };
-
-    reader.readAsText(file);
   };
 
   const sendMessage = async (content: string, newMessages?: Message[]) => {
@@ -147,8 +118,7 @@ export default function ChatWindow() {
           ...prev,
           {
             role: 'assistant',
-            content:
-              '요청 시간이 길어 중단되었습니다. 요청을 더 작게 나누거나 모드를 Lite/Standard로 바꿔 다시 시도해 주세요.',
+            content: '요청 시간이 제한을 초과했습니다. 문장을 짧게 나눠 다시 요청해 주세요.',
           },
         ]);
       } else {
@@ -162,7 +132,12 @@ export default function ChatWindow() {
     }
   };
 
-  const handleContinue = () => sendMessage('계속 이어서 작성해줘.', [...messages, { role: 'user', content: '계속 이어서 작성해줘.' }]);
+  const handleContinue = () => {
+    sendMessage('앞 내용을 기준으로 핵심만 이어서 정리해줘.', [
+      ...messages,
+      { role: 'user', content: '앞 내용을 기준으로 핵심만 이어서 정리해줘.' },
+    ]);
+  };
 
   const handleRegenerate = () => {
     const latest = messages[messages.length - 1];
@@ -178,38 +153,20 @@ export default function ChatWindow() {
     sendMessage(newContent, history);
   };
 
-  const handleExportMessage = (message: Message) => {
-    const markdown = `## ${message.role === 'user' ? 'User' : 'Assistant'}\n\n${message.content}`;
-    const blob = new Blob([markdown], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `메시지-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <div className="flex h-screen flex-col bg-[#f7f7f8] text-gray-900">
       <header className="sticky top-0 z-10 border-b border-gray-200/80 bg-[#f7f7f8]/90 backdrop-blur">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
           <button onClick={handleNewChat} className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-medium text-gray-700 transition hover:bg-white">
             <Image src="/logo.png" alt="로고" width={24} height={24} unoptimized />
-            <span>대화 도우미</span>
+            <span>사고 정리 도구</span>
           </button>
 
           <div className="flex items-center gap-2">
             {!isInitialState && (
-              <>
-                <button onClick={handleSave} className="rounded-lg border border-gray-200 bg-white p-2 text-gray-600 hover:text-gray-900" title="Save chat">
-                  <Download className="h-4 w-4" />
-                </button>
-                <button onClick={handleNewChat} className="rounded-lg border border-gray-200 bg-white p-2 text-gray-600 hover:text-gray-900" title="New chat">
-                  <Plus className="h-4 w-4" />
-                </button>
-              </>
+              <button onClick={handleNewChat} className="rounded-lg border border-gray-200 bg-white p-2 text-gray-600 hover:text-gray-900" title="New chat">
+                <Plus className="h-4 w-4" />
+              </button>
             )}
             <button onClick={handleLogout} className="rounded-lg border border-gray-200 bg-white p-2 text-gray-600 hover:text-red-500" title="Logout">
               <LogOut className="h-4 w-4" />
@@ -222,8 +179,8 @@ export default function ChatWindow() {
         {isInitialState ? (
           <section className="w-full max-w-3xl space-y-6">
             <div className="space-y-2 text-center">
-              <h1 className="text-3xl font-semibold tracking-tight text-gray-900 md:text-4xl">가볍고 빠른 AI 도우미</h1>
-              <p className="text-sm text-gray-500 md:text-base">필요한 답을 빠르게 얻을 수 있도록 단순한 대화 흐름으로 구성했습니다.</p>
+              <h1 className="text-3xl font-semibold tracking-tight text-gray-900 md:text-4xl">산만한 생각을 구조로 바꿉니다</h1>
+              <p className="text-sm text-gray-500 md:text-base">아이디어를 구조화·정제·검증하는 데 집중된 대화 도구입니다.</p>
             </div>
             <InputBox
               textareaRef={textareaRef}
@@ -234,7 +191,6 @@ export default function ChatWindow() {
               setMode={setMode}
               isLoading={isLoading}
               onStop={stopGeneration}
-              onLoad={handleLoad}
             />
           </section>
         ) : (
@@ -246,7 +202,6 @@ export default function ChatWindow() {
                 isStreaming={isLoading && index === messages.length - 1 && message.role === 'assistant'}
                 onRegenerate={index === messages.length - 1 && message.role === 'assistant' ? handleRegenerate : undefined}
                 onEdit={(content) => handleEditMessage(index, content)}
-                onExport={() => handleExportMessage(message)}
               />
             ))}
             <div ref={messagesEndRef} />
@@ -266,7 +221,6 @@ export default function ChatWindow() {
               setMode={setMode}
               isLoading={isLoading}
               onStop={stopGeneration}
-              onLoad={handleLoad}
             />
             {isLoading && (
               <button onClick={handleContinue} className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-3 py-1 text-xs text-gray-600 hover:text-gray-900">
@@ -274,7 +228,7 @@ export default function ChatWindow() {
                 Continue
               </button>
             )}
-            <p className="text-center text-[11px] text-gray-500">AI generated content — verify important information.</p>
+            <p className="text-center text-[11px] text-gray-500">중요 정보는 반드시 직접 확인하세요.</p>
           </div>
         </footer>
       )}
@@ -291,10 +245,9 @@ interface InputBoxProps {
   setMode: (mode: Mode) => void;
   isLoading: boolean;
   onStop: () => void;
-  onLoad: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-function InputBox({ textareaRef, input, onInput, onSend, mode, setMode, isLoading, onStop, onLoad }: InputBoxProps) {
+function InputBox({ textareaRef, input, onInput, onSend, mode, setMode, isLoading, onStop }: InputBoxProps) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-2 shadow-sm">
       <textarea
@@ -307,7 +260,7 @@ function InputBox({ textareaRef, input, onInput, onSend, mode, setMode, isLoadin
             onSend();
           }
         }}
-        placeholder="무엇이든 물어보세요"
+        placeholder="정리하고 싶은 생각이나 초안을 입력하세요"
         rows={1}
         className="min-h-[56px] max-h-[180px] w-full resize-none rounded-xl border-0 px-3 py-3 text-[15px] outline-none placeholder:text-gray-400"
       />
@@ -315,10 +268,7 @@ function InputBox({ textareaRef, input, onInput, onSend, mode, setMode, isLoadin
       <div className="flex items-center justify-between gap-2 px-2 pb-1">
         <div className="flex items-center gap-2">
           <ModeSelector currentMode={mode} onChange={setMode} />
-          <label className="cursor-pointer rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700" title="Load chat">
-            <Upload className="h-4 w-4" />
-            <input type="file" accept=".md" className="hidden" onChange={onLoad} />
-          </label>
+          <span className="text-xs text-gray-500">현재 모드: {MODES[mode]}</span>
         </div>
 
         {isLoading ? (
