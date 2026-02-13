@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DeepSea",
-  description: "Minimalist AI Chat Interface",
+  title: "AI 도우미",
+  description: "간결한 AI 대화 인터페이스",
   icons: {
     icon: "/logo.png",
   },
@@ -26,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="ko">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

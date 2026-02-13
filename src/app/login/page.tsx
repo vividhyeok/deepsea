@@ -47,8 +47,8 @@ export default function LoginPage() {
                     <div className="p-3 bg-blue-600/10 rounded-full">
                         <Lock className="w-8 h-8 text-blue-500" />
                     </div>
-                    <h1 className="text-2xl font-bold tracking-tight">DeepSea Login</h1>
-                    <p className="text-sm text-gray-400">Enter your credentials to access the platform</p>
+                    <h1 className="text-2xl font-bold tracking-tight">관리자 로그인</h1>
+                    <p className="text-sm text-gray-400">접속을 위해 계정 정보를 입력하세요</p>
                 </div>
 
                 <form onSubmit={handleLogin} className="space-y-4">

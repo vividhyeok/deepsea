@@ -28,7 +28,7 @@ export function parseMarkdown(text: string): ConversationData {
     const lines = text.split('\n');
     let mode: Mode = 'standard';
     let date = new Date().toISOString();
-    let messages: Message[] = [];
+    const messages: Message[] = [];
 
     // Parse Frontmatter
     let i = 0;
