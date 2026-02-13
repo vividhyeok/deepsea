@@ -179,6 +179,27 @@ export default function ChatWindow() {
         setInput('');
     };
 
+    // Edit message and restart conversation from that point
+    const handleEditMessage = (index: number, newContent: string) => {
+        // Keep messages up to the index (exclusive), act as if this is a new message
+        const newHistory = messages.slice(0, index);
+        sendMessage(newContent, newHistory);
+    };
+
+    // Export single message
+    const handleExportMessage = (message: Message) => {
+        const markdown = `## ${message.role === 'user' ? 'User' : 'Assistant'}\n\n${message.content}`;
+        const blob = new Blob([markdown], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `deepsea-message-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.md`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="flex flex-col h-screen bg-white text-gray-800 font-sans selection:bg-blue-100 selection:text-blue-900">
             {/* Header (Minimal) */}
@@ -196,7 +217,6 @@ export default function ChatWindow() {
                                 <div className="w-8 h-8 relative">
                                     <Image src="/logo.png" alt="Logo" fill className="object-contain" />
                                 </div>
-                                <span className="font-semibold text-gray-700 tracking-tight">DeepSea</span>
                             </div>
                         )}
                         {/* If initial state, header logo is hidden (shown in center) */}
@@ -240,7 +260,7 @@ export default function ChatWindow() {
                                         }
                                     }}
                                     placeholder="무엇이든 물어보세요..."
-                                    className="w-full bg-transparent px-5 py-4 text-gray-800 placeholder-gray-400 focus:outline-none resize-none min-h-[60px] max-h-[200px] text-lg rounded-2xl"
+                                    className="w-full bg-transparent px-5 py-4 text-gray-800 placeholder-gray-400 focus:outline-none resize-none min-h-[60px] max-h-[200px] text-[15px] rounded-2xl"
                                     rows={1}
                                 />
 
@@ -288,6 +308,8 @@ export default function ChatWindow() {
                                 message={msg}
                                 isStreaming={isLoading && idx === messages.length - 1 && msg.role === 'assistant'}
                                 onRegenerate={idx === messages.length - 1 && msg.role === 'assistant' ? handleRegenerate : undefined}
+                                onEdit={(newContent) => handleEditMessage(idx, newContent)}
+                                onExport={() => handleExportMessage(msg)}
                             />
                         ))}
 
