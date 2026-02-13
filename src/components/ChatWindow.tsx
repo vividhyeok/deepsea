@@ -177,10 +177,15 @@ export default function ChatWindow() {
 
       <main className={cn('mx-auto w-full max-w-5xl flex-1 px-4', isInitialState ? 'flex items-center justify-center' : 'overflow-y-auto pb-44 pt-6')}>
         {isInitialState ? (
-          <section className="w-full max-w-3xl space-y-6">
-            <div className="space-y-2 text-center">
-              <h1 className="text-3xl font-semibold tracking-tight text-gray-900 md:text-4xl">산만한 생각을 구조로 바꿉니다</h1>
-              <p className="text-sm text-gray-500 md:text-base">아이디어를 구조화·정제·검증하는 데 집중된 대화 도구입니다.</p>
+          <section className="w-full max-w-3xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="flex flex-col items-center space-y-4 text-center">
+              <div className="relative h-24 w-24 overflow-hidden rounded-2xl shadow-xl ring-1 ring-gray-200 transition-transform hover:scale-105 duration-300">
+                <Image src="/logo.png" alt="DeepSea Logo" fill className="object-contain" priority unoptimized />
+              </div>
+              <div className="space-y-2">
+                <h1 className="text-3xl font-bold tracking-tight text-gray-900 md:text-5xl">산만한 생각을 구조로 바꿉니다</h1>
+                <p className="text-sm text-gray-500 md:text-lg">아이디어를 구조화·정제·검증하는 데 집중된 대화 도구입니다.</p>
+              </div>
             </div>
             <InputBox
               textareaRef={textareaRef}
