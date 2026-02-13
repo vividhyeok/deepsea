@@ -51,7 +51,7 @@ export default function MessageItem({ message, isStreaming, onRegenerate, onEdit
                     {isUser ? (
                         <div className="text-gray-500 text-xs font-bold">YOU</div>
                     ) : (
-                        <Image src="/logo.png" alt="DeepSea" width={32} height={32} className="object-cover" />
+                        <Image src="/logo.png" alt="DeepSea" width={32} height={32} className="object-cover" unoptimized />
                     )}
                 </div>
 

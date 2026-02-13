@@ -215,7 +215,7 @@ export default function ChatWindow() {
                                 className="cursor-pointer flex items-center space-x-2 hover:bg-gray-100 px-2 py-1 rounded-lg transition-colors"
                             >
                                 <div className="w-8 h-8 relative">
-                                    <Image src="/logo.png" alt="Logo" fill className="object-contain" />
+                                    <Image src="/logo.png" alt="Logo" fill className="object-contain" unoptimized />
                                 </div>
                             </div>
                         )}
@@ -242,7 +242,7 @@ export default function ChatWindow() {
                     // INITIAL STATE: Centered Logo + Input
                     <div className="flex flex-col items-center justify-center min-h-[80vh] px-4 animate-in fade-in duration-500">
                         <div className="w-24 h-24 md:w-32 md:h-32 relative mb-6">
-                            <Image src="/logo.png" alt="DeepSea" fill className="object-contain drop-shadow-sm" priority />
+                            <Image src="/logo.png" alt="DeepSea" fill className="object-contain drop-shadow-sm" priority unoptimized />
                         </div>
                         <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-8 tracking-tight">DeepSea</h1>
 
