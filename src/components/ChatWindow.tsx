@@ -244,10 +244,23 @@ export default function ChatWindow() {
                 {isInitialState ? (
                     // INITIAL STATE: Centered Logo + Input
                     <div className="w-full h-full flex flex-col items-center justify-center px-4 animate-in fade-in duration-500">
-                        <div className="w-24 h-24 md:w-32 md:h-32 relative mb-6">
-                            <Image src="/logo.png" alt="DeepSea" fill className="object-contain drop-shadow-sm" priority unoptimized />
+                        <div className="flex flex-col md:flex-row items-center md:items-start mb-8 w-full max-w-2xl px-2">
+                            <div className="w-20 h-20 md:w-24 md:h-24 relative overflow-hidden rounded-2xl mb-4 md:mb-0 md:mr-6 shrink-0">
+                                <Image
+                                    src="/logo.png"
+                                    alt="DeepSea"
+                                    fill
+                                    className="object-contain scale-[1.7]"
+                                    priority
+                                    unoptimized
+                                />
+                            </div>
+                            <h2 className="text-2xl md:text-3xl font-semibold text-gray-800 leading-tight text-center md:text-left mt-2">
+                                <span className="bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">민혁님, 안녕하세요.</span>
+                                <br />
+                                <span className="text-gray-400">무엇을 도와드릴까요?</span>
+                            </h2>
                         </div>
-                        <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-8 tracking-tight">DeepSea</h1>
 
                         {/* Central Input Box */}
                         <div className="w-full max-w-2xl">
@@ -262,7 +275,7 @@ export default function ChatWindow() {
                                             sendMessage(input);
                                         }
                                     }}
-                                    placeholder="무엇이든 물어보세요..."
+                                    placeholder="DeepSea에게 물어보세요"
                                     className="w-full bg-transparent px-5 py-4 text-gray-800 placeholder-gray-400 focus:outline-none resize-none min-h-[60px] max-h-[200px] text-[15px] rounded-2xl"
                                     rows={1}
                                 />
@@ -287,18 +300,6 @@ export default function ChatWindow() {
                                         <Send className="w-5 h-5" />
                                     </button>
                                 </div>
-                            </div>
-
-                            <div className="mt-8 flex flex-wrap justify-center gap-2 text-sm text-gray-500">
-                                <button onClick={() => sendMessage("DeepSea의 주요 기능은 뭐야?")} className="px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-full border border-gray-100 transition-colors">
-                                    ✨ DeepSea 소개
-                                </button>
-                                <button onClick={() => sendMessage("복잡한 코드를 분석해줘")} className="px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-full border border-gray-100 transition-colors">
-                                    💻 코드 분석
-                                </button>
-                                <button onClick={() => sendMessage("주요 뉴스 요약해줘")} className="px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-full border border-gray-100 transition-colors">
-                                    📰 뉴스 요약
-                                </button>
                             </div>
                         </div>
                     </div>
